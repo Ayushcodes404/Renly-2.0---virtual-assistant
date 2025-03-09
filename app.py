@@ -62,6 +62,7 @@ def capture_screenshot():
         return f"Failed to capture screenshot: {str(e)}"
 
 def open_application(app_name):
+    #add your paths 
     """Opens applications based on user input."""
     app_paths = {
         "notepad": "notepad.exe",
@@ -70,7 +71,7 @@ def open_application(app_name):
         "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
         "pycharm": "C:\\Program Files\\JetBrains\\PyCharm Community Edition\\bin\\pycharm64.exe",
         "intellij": "C:\\Program Files\\JetBrains\\IntelliJ IDEA Community Edition\\bin\\idea64.exe",
-        "vs code": "C:\\Users\\Ayush\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+        "vs code": "C:\\Users\\your_username\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe" 
     }
 
     if app_name in app_paths:
