@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            width: 450px;
+            max-width: 90%;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .chat-window {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            height: 250px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .speak-button {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .stop-button {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .screenshot-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .user-message {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #e3f2fd;
+            border-radius: 5px;
+        }
+
+        .assistant-message {
+            color: #4a4a4a;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .screenshot-container {
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .screenshot-image {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .zoom-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .zoom-button {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Renly 2.0 </h1>
+        
+        <div class="instructions">
+            <strong>Available Commands:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>"Write Hello World in [Python/Java/C++]"</li>
+                <li>"Open [Python/Java/C++] IDE"</li>
+                <li>"Capture screenshot" / "Take screenshot"</li>
+                <li>"Open notepad/calculator/chrome"</li>
+                <li>"show screenshot"</li>
+                <li>"Tell me a joke"</li>
+                <li>"Exit" to quit</li>
+            </ul>
+        </div>
+
+        <div class="chat-window" id="chatWindow"></div>
+
+        <div class="button-group">
+            <button class="speak-button" id="speakBtn" onclick="startListening()">Start Listening</button>
+            <button class="stop-button" id="stopBtn" onclick="stopListening()" disabled>Stop Listening</button>
+            <button class="screenshot-button" onclick="captureScreenshot()">Capture Screenshot</button>
+        </div>
+
+        <div class="screenshot-container" id="screenshotContainer">
+            <img id="screenshotImage" class="screenshot-image" src="" alt="Captured Screenshot">
+            <div class="zoom-controls">
+                <button class="zoom-button" onclick="zoomIn()">Zoom In (+)</button>
+                <button class="zoom-button" onclick="zoomOut()">Zoom Out (-)</button>
+                <button class="zoom-button" onclick="openScreenshot()">Open Fullscreen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isListening = false;
+        let currentScale = 1;
+        let latestScreenshotUrl = null;
+    
+        function updateButtonStates() {
+            document.getElementById("speakBtn").disabled = isListening;
+            document.getElementById("stopBtn").disabled = !isListening;
+        }
+    
+        async function startListening() {
+            if (isListening) return;
+            isListening = true;
+            updateButtonStates();
+            addChatMessage("Assistant", "Listening...");
+    
+            try {
+                const response = await fetch('/speak', { method: 'POST' });
+                const data = await response.json();
+    
+                if (data.user_command) {
+                    addChatMessage("You", data.user_command);
+                }
+                addChatMessage("Assistant", data.response);
+            } catch (error) {
+                console.error("Error:", error);
+                addChatMessage("Assistant", "Error processing request");
+            } finally {
+                isListening = false;
+                updateButtonStates();
+            }
+        }
+    
+        async function stopListening() {
+            if (!isListening) return;
+    
+            try {
+                const response = await fetch('/stop', { method: 'POST' });
+                const data = await response.json();
+                addChatMessage("Assistant", data.response);
+            } catch (error) {
+                console.error("Error:", error);
+                addChatMessage("Assistant", "Error stopping listening");
+            } finally {
+                isListening = false;
+                updateButtonStates();
+            }
+        }
+    
+        function addChatMessage(speaker, text) {
+            const chatWindow = document.getElementById("chatWindow");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = speaker.toLowerCase() + "-message";
+            messageDiv.innerHTML = `<strong>${speaker}:</strong> ${text}`;
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+    
+        async function openPicture() {
+            const response = await fetch('/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: "open picture" })
+            });
+    
+            const data = await response.json();
+            addChatMessage("Assistant", data.response);
+    
+            if (data.response.includes("Opening the latest screenshot")) {
+                latestScreenshotUrl = `/latest_screenshot?${Date.now()}`;
+                document.getElementById("screenshotImage").src = latestScreenshotUrl;
+                document.getElementById("screenshotContainer").style.display = "block";
+                currentScale = 1;
+            }
+        }
+    
+        async function zoomIn() {
+            if (!latestScreenshotUrl) {
+                addChatMessage("Assistant", "No screenshot available. Capture and open a screenshot first.");
+                return;
+            }
+    
+            const response = await fetch('/zoom_in', { method: 'POST' });
+            const data = await response.json();
+            currentScale = data.zoom_level;
+            document.getElementById("screenshotImage").style.transform = `scale(${currentScale})`;
+        }
+    
+        async function zoomOut() {
+            if (!latestScreenshotUrl) {
+                addChatMessage("Assistant", "No screenshot available. Capture and open a screenshot first.");
+                return;
+            }
+    
+            const response = await fetch('/zoom_out', { method: 'POST' });
+            const data = await response.json();
+            currentScale = data.zoom_level;
+            document.getElementById("screenshotImage").style.transform = `scale(${currentScale})`;
+        }
+    </script>
+    
+    
+</body>
+</html>
